@@ -1,11 +1,27 @@
 var Twit = require('twit')
+var Const = require('./constants');
  
 var T = new Twit({
-    consumer_key:         'jXDHkMYCz362BYvMTrnb5XqPn'
-  , consumer_secret:      'iIJ9LttDIeXMtLvWKTeoMpPekUsOzuFirz22ad9mWdagHM0CNJ'
-  , access_token:         '3246418552-mecct9MTpmBS28Xn5CUKwRzOett1Phc9kT1vicm'
-  , access_token_secret:  '05oQTgKmbL1Ia5jaQth0zivX11rLTinwlDCebtwEPZg37'
+    consumer_key:         Const.CONSTANTS['consumer_key']
+  , consumer_secret:      Const.CONSTANTS['consumer_secret']
+  , access_token:         Const.CONSTANTS['access_token']
+  , access_token_secret:  Const.CONSTANTS['access_token_secret']
 })
+
+
+/*
+ * Gives the time since the tweet was posted
+ * @params	tweet	json formated tweet
+ * @return	diff	time since the tweet was posted (in seconds)
+ */
+function timeSincePosted(tweet) {
+    var tweet_date = new Date(Date.parse(tweet.created_at));
+    var now = new Date();
+   
+    var diff = Math.floor((now - tweet_date) / 1000);
+	
+    return diff;
+}
 
 
 
@@ -16,16 +32,21 @@ function myCallback(err, data, response) {
 		var tweet = data[tweetNb];
 		var id = tweet.id;
 		var userName = tweet.user.screen_name;
+		var creationDate = tweet.created_at;
 		
 		lastId = (lastId < id) ? id : lastId;
 		
 		
+		// We want to treat only recent posts
+		if (timeSincePosted(tweet) < 5*60) {
 		
-		// console.log ("L'utilisateur qui a envoyé le tweet, c'est @" + userName);
-		
-		T.post('statuses/update', { status: 'Salut @'+userName+', merci de ta charmante attention !' }, function(err, data, response) {
-		  console.log(data)
-		})
+			console.log("Le tweet de @" + userName + " a été posté il y a " + timeSincePosted(tweet) + " secondes. Son id est " + id + " et lastId est " + lastId);
+			// console.log ("L'utilisateur qui a envoyé le tweet, c'est @" + userName);
+			
+			// T.post('statuses/update', { status: 'Salut @'+userName+', merci de ta charmante attention !' }, function(err, data, response) {
+			  // console.log(data)
+			// })
+		}
 	}
 }
 
