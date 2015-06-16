@@ -11,8 +11,8 @@ var T = new Twit({
 
 /*
  * Gives the time since the tweet was posted
- * @params	tweet	json formated tweet
- * @return	diff	time since the tweet was posted (in seconds)
+ * @params	tweet	array		json formated tweet
+ * @return	diff	int			time since the tweet was posted (in seconds)
  */
 function timeSincePosted(tweet) {
     var tweet_date = new Date(Date.parse(tweet.created_at));
@@ -46,6 +46,7 @@ function myCallback(err, data, response) {
 			// T.post('statuses/update', { status: 'Salut @'+userName+', merci de ta charmante attention !' }, function(err, data, response) {
 			  // console.log(data)
 			// })
+			
 		}
 	}
 }

@@ -6,8 +6,8 @@
   },
   "author": "Bjorge <bastien.jorge@gmail.com>",
   "description": "A bot for twitter which generates memes",
-  "repository" : {
-	"type" : "git",
-	"url" : "https://github.com/bj0rge/bjorgebot.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bj0rge/bjorgebot.git"
   }
 }
