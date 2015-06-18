@@ -1,5 +1,5 @@
 # bjorgebot
-A bot for twitter which get infos about beers
+A bot for twitter which gives infos about beers
 
 # Installation
 
