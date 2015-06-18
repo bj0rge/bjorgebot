@@ -5,7 +5,7 @@
     "twit": "^1.1.20"
   },
   "author": "Bjorge <bastien.jorge@gmail.com>",
-  "description": "A bot for twitter which generates memes",
+  "description": "A bot for twitter which gives infos about beers",
   "repository": {
     "type": "git",
     "url": "https://github.com/bj0rge/bjorgebot.git"
