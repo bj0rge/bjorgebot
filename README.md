@@ -20,7 +20,7 @@ bjorgebot is based on two different APIs:
 
 You only have to send a tweet mentioning the Twitter user and let it explain to you.
 
-If you are in a hurry, you have two ways to ask him stuff, with `find` or `search` keyword (the first one is for when you already know the exact name of your beer, the second one for searching). In my case:
+If you are in a hurry, you have two ways to ask him stuff, with `find` or `search` keywords (the first one is for when you already know the exact name of your beer, the second one for searching). In my case:
 
 ```
 @bj0rge2 search Aventinus
