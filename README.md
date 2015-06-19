@@ -31,7 +31,7 @@ If you are in a hurry, you have two ways to ask him stuff, with `find` or `searc
 # Installation
 
 - Run `npm install` for installing dependencies.
-- Create a file named `constants.js` with the following content:
+- Create a file named `constants.js` with the following content and place it to the root folder:
 
 ```javascript
 var CONSTANTS = {
