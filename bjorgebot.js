@@ -1,6 +1,19 @@
 var Twit = require('twit')
 var Const = require('./constants');
 var http = require('http');
+
+/*
+ * ##################################
+ * ##################################
+ */
+
+var BreweryDb = require('brewerydb-node'); 
+var brewdb = new BreweryDb(Const.CONSTANTS['brewerydb_key']);
+
+/*
+ * ##################################
+ * ##################################
+ */
  
 var T = new Twit({
     consumer_key:         Const.CONSTANTS['consumer_key']
@@ -25,58 +38,20 @@ function timeSincePosted(tweet) {
 }
 
 
-/*
- * Send a GET request to brewrydb
- * @params	path	string		the path of the request 
- * 			data	array		the parameters of the request
- */
-function getRequest(path, data, callback) {
-  
-	// Formating the parameters into the path
-	var fullpath = path + "?";
-	Object.keys(data).forEach(function(key){
-		fullpath += key + "=" + data[key] + "&";
-	});
-	fullpath = fullpath.substring(0, fullpath.length - 1);
-
-	// Setting request options
-	var options = {
-		  host : 'api.brewerydb.com', // here only the domain name
-		  // (no http/https !)
-		  port : 80,
-		  path : fullpath, // the rest of the url with parameters if needed
-		  method : 'GET', // do POST
-	};
-
- 
-	// Set up the request
-	var get_req = http.request(options, function(res) {
-		res.setEncoding('utf8');
-		res.on('data', function (res) {
-			callback(res);
-		});
-	});
-
-	// post the data
-	get_req.write(JSON.stringify(data));
-	get_req.end();
-
-}
-
 
 /*
  * Get last mentions and treat them
  */
 function getAndTreatMentions(err, data, response) {
-	// console.log(JSON.stringify(data, null, 2));
 	
 	// for each mentions
-	for (var tweetNb = 0; tweetNb < data.length; tweetNb++) {
+	data.forEach(function (tweet) {
 		// get informations
-		var tweet = data[tweetNb];
+		// var tweet = data[i];
 		var id = tweet.id;
 		var userName = tweet.user.screen_name;
 		var creationDate = tweet.created_at;
+		
 		
 		// Replace all useless chars
 		var message = tweet.text
@@ -91,27 +66,80 @@ function getAndTreatMentions(err, data, response) {
 				.replace ("  ", " ")
 				.replace ("  ", " ");
 		
-		
 		// We want to treat only recent posts
 		if ((timeSincePosted(tweet) < 5*60) && (id != lastId)) {
-		
-			console.log("Le tweet de @" + userName + " a été posté il y a " + timeSincePosted(tweet) + " secondes. Son id est " + id + " et lastId est " + lastId);
-			
-			// Needed datas for the GET request
-			var data = {	
-				"key" 		: Const.CONSTANTS['brewerydb_key'], 
-				"type" 		: "beer", 
-				"q" 		: encodeURIComponent(message)
-			};
-			
-			console.log("\nmessage : " + message);
-			getRequest('/v2/search', data, function(res){
-			});
-			// console.log("\n\n" + JSON.stringify(tweet, null, 2));
+							
+			// TEMPORARY
+			// var keyword = "Aventinus Weizen-Eisbock";
+			var keyword = "Aventinus";
+			var searchtype = "find".toLowerCase();
+
+			// If we want to find
+			if (searchtype == "find") {
+				// First, we try to find the wanted beer
+				brewdb.beer.find({ name:keyword }, function(err, data){
+					// If there is a result, we found the beer. Yay!
+					if (data){
+						// Here we get the first result, we don't care about the year of brewing
+						var beer = data[0];
+						brewdb.beer.getById(beer.id, {}, function(err, data){
+							// Special treatment if there is a picture
+							var img = (beer.labels) ? "\nimage :" + beer.labels.medium : "";
+							
+							// CHANGE THE CONTENT OF IMG AND POST A TWEET W/ IMG IF NECESSARY
+							// console.log("\nOnly one beer.\n_____\n\nName: " + beer.nameDisplay + "\nStyle: " + beer.style.shortName + "\nPlus d'infos: " + Const.CONSTANTS['beer_uri_base'] + beer.id + img);
+							
+							T.post('statuses/update', { status: '@'+userName+': ' + beer.nameDisplay +' - '+ beer.style.shortName + '\nMore infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id,
+							'in_reply_to_status_id': id}, function(err, data, response) {
+								console.log("status: " + '@'+userName+': ' + beer.nameDisplay +' - '+ beer.style.shortName + '\nMore infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id);
+							});
+							
+							
+							
+							// T.post('statuses/update', { status: '@'+userName+', merci de ta charmante attention !' /* in_reply_to_status_id: id */ }, function(err, data, response) {
+							  // console.log(data)
+							// })
+							
+							// WE ALSO FOUND (if data.length > 1)
+						}); 
+						
+					}
+					// If there is no result, we tell the user
+					else {
+						console.log("\nSorry, we weren't able to find your beer. Please try another request :)");		
+					}
+				});
+			}
+			// if we want to search
+			else if (searchtype == "search") {
+				// Function search
+				brewdb.search.beers({ q:keyword }, function(err, data){
+					// If there is at least one beer found
+					if (data){
+						var beers = "";
+						for (var i = 0; i < data.length; i++) {
+							beers += data[i].name + ", ";
+						}
+						beers = beers.substring(0, (beers.length - 2));
+						
+						console.log("\nWe found: " + beers);
+						// BE CAREFUL ABOUT 140 CHARS!
+					}
+					// If no result
+					else {
+						console.log("\nSorry, we weren't able to find your beer. Please try another request :)");
+					}
+				});
+			}
+			// if the answer is not correctly formatted 
+			else {
+				console.log("@user You should send me a message starting with 'find' or 'search', then the beer name you want infos about.")
+			}
+
 		}
 		// For not getting oldest mentions
 		lastId = (lastId < id) ? id : lastId;
-	}
+	});
 }
 
 
@@ -122,11 +150,9 @@ lastId = 0;
 setInterval( function(){
 	// Get statuses
 	if (lastId == 0) {
-		console.log("pas de lastid");
 		T.get('statuses/mentions_timeline', { count: '5' }, getAndTreatMentions);
 	}
 	else {
-		console.log("lastid = " + lastId);
 		T.get('statuses/mentions_timeline', { count: '5', since_id: lastId }, getAndTreatMentions); 
 	}
 }, (6*1000)) 
