@@ -30,7 +30,7 @@ function timeSincePosted(tweet) {
  * @params	path	string		the path of the request 
  * 			data	array		the parameters of the request
  */
-function getRequest(path, data) {
+function getRequest(path, data, callback) {
   
 	// Formating the parameters into the path
 	var fullpath = path + "?";
@@ -53,8 +53,7 @@ function getRequest(path, data) {
 	var get_req = http.request(options, function(res) {
 		res.setEncoding('utf8');
 		res.on('data', function (res) {
-			// here a callback instead of log
-			console.log(res);
+			callback(res);
 		});
 	});
 
@@ -79,21 +78,36 @@ function getAndTreatMentions(err, data, response) {
 		var userName = tweet.user.screen_name;
 		var creationDate = tweet.created_at;
 		
+		// Replace all useless chars
+		var message = tweet.text
+				.replace("@"+Const.CONSTANTS['username'], "")
+				.replace(":", "")
+				.replace(".", "")
+				.replace("+", " ")
+				.replace(";", "")
+				.replace("?", "")
+				.replace("!", "")
+				.replace(",", "")
+				.replace ("  ", " ")
+				.replace ("  ", " ");
+		
 		
 		// We want to treat only recent posts
 		if ((timeSincePosted(tweet) < 5*60) && (id != lastId)) {
 		
 			console.log("Le tweet de @" + userName + " a été posté il y a " + timeSincePosted(tweet) + " secondes. Son id est " + id + " et lastId est " + lastId);
 			
-			var Const = require('./constants');
+			// Needed datas for the GET request
 			var data = {	
 				"key" 		: Const.CONSTANTS['brewerydb_key'], 
 				"type" 		: "beer", 
-				"q" 		: "aventinus"
+				"q" 		: encodeURIComponent(message)
 			};
-
-					
-			getRequest('/v2/search', data);
+			
+			console.log("\nmessage : " + message);
+			getRequest('/v2/search', data, function(res){
+			});
+			// console.log("\n\n" + JSON.stringify(tweet, null, 2));
 		}
 		// For not getting oldest mentions
 		lastId = (lastId < id) ? id : lastId;

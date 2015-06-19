@@ -13,7 +13,8 @@ var CONSTANTS = {
 	'access_token'			:	'YOUR_TWITTER_ACCESS_TOKEN',
 	'access_token_secret'	:	'YOUR_TWITTER_TOKEN_SECRET',
 	
-	'brewerydb_key'			:	'YOUR_BREWERTDB_KEY'
+	'brewerydb_key'			:	'YOUR_BREWERTDB_KEY',
+	'username'				:	'YOUR_TWITTER_USERNAME'
 };
 
 module.exports.CONSTANTS = CONSTANTS;
