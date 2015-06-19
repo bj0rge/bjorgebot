@@ -1,6 +1,8 @@
 var Twit = require('twit')
 var Const = require('./constants');
 var http = require('http');
+var fs = require('fs');
+var request = require('request');
 
 var BreweryDb = require('brewerydb-node'); 
 var brewdb = new BreweryDb(Const.CONSTANTS['brewerydb_key']);
@@ -52,7 +54,37 @@ function formatMessage(username, message) {
 	return (message.length <= 140) ? message : (message.substring(0,137) + "...");
 }
 
+function iFoundOtherBeers(brewdb, keyword, userName, callback){
+	// The bot also says it has found other beers
+	brewdb.search.beers({ q:keyword }, function(err, data){
+		// If there is at least one beer found
+		if (data){
+			var beers = "";
+			for (var i = 0; i < data.length; i++) {
+				beers += data[i].name + ", ";
+			}
+			beers = beers.substring(0, (beers.length - 2));
+			
+			var answer = formatMessage(userName,'We also found: ' + beers);
+			
+			postTweet(T,answer, function(data){
+				callback(answer);
+			});
+		}
+	});
+}
 
+
+
+
+var download = function(uri, filename, callback){
+  request.head(uri, function(err, res, body){
+    console.log('content-type:', res.headers['content-type']);
+    console.log('content-length:', res.headers['content-length']);
+
+    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  });
+};
 
 /*
  * Get last mentions and treat them
@@ -101,38 +133,55 @@ function getAndTreatMentions(err, data, response) {
 						var beer = data[0];
 						brewdb.beer.getById(beer.id, {}, function(err, data){
 							// Special treatment if there is a picture	
-							// Temporary muted, we'll see if I have enough time for that
-							// var img = (beer.labels) ? "\n" + beer.labels.medium : "";
-							var img = "";
+							if (beer.labels.medium) {
+								var filename = 'tmp.' + beer.labels.medium.split(".")[beer.labels.medium.split(".").length - 1];
+								var answer = formatMessage(userName,
+										beer.nameDisplay +' ('+ beer.abv +'°) - '+ beer.style.shortName + '\n\
+										More infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id);
+										
+										
+								download(beer.labels.medium, filename, function(){
+									//
+									// post a tweet with media
+									//
+									var b64content = fs.readFileSync(filename, { encoding: 'base64' })
+
+									// first we must post the media to Twitter
+									T.post('media/upload', { media: b64content }, function (err, data, response) {
+										
+										
+											
+										// now we can reference the media and post a tweet (media will attach to the tweet)
+										var mediaIdStr = data.media_id_string
+										var params = { status: answer, media_ids: [mediaIdStr] }
+
+										T.post('statuses/update', params, function (err, data, response) {
+											console.log(answer)
+											
+											// We know can remove the temp file
+											fs.unlink(filename, function (err) {
+												if (err) throw err;
+												console.log('successfully deleted ' + filename);
+											});
+											
+											// Says that there are other beers if the answer doesn't please the user :)
+											iFoundOtherBeers(brewdb, keyword, userName, function(data){
+												console.log(answer);
+											});
+										});
+									});								
+								});
 							
-							var answer = formatMessage(userName,
-								beer.nameDisplay +' - '+ beer.style.shortName + img+'\n\
-								More infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id);
-							
-							postTweet(T,answer, function(data){
-								console.log(answer);
-							});
-							
-							
-							
-							
-							// The bot also says it has found other beers
-							brewdb.search.beers({ q:keyword }, function(err, data){
-								// If there is at least one beer found
-								if (data){
-									var beers = "";
-									for (var i = 0; i < data.length; i++) {
-										beers += data[i].name + ", ";
-									}
-									beers = beers.substring(0, (beers.length - 2));
-									
-									var answer = formatMessage(userName,'We also found: ' + beers);
-									
-									postTweet(T,answer, function(data){
-										console.log(answer);
-									});
-								}
-							});
+							}
+							else {								
+								postTweet(T,answer, function(data){
+									console.log(answer);
+								});
+								
+								iFoundOtherBeers(brewdb, keyword, userName, function(data){
+									console.log(answer);
+								});
+							}
 						}); 
 						
 					}
@@ -164,7 +213,7 @@ function getAndTreatMentions(err, data, response) {
 					}
 					// If no result
 					else {
-						var answer = formatMessage(userName, "Sorry, we weren't able to find your beer. Please try another request :)";
+						var answer = formatMessage(userName, "Sorry, we weren't able to find your beer. Please try another request :)");
 						postTweet(T,answer, function(data){
 							console.log(answer);
 						});
@@ -173,7 +222,7 @@ function getAndTreatMentions(err, data, response) {
 			}
 			// if the answer is not correctly formatted 
 			else {
-				var answer = formatMessage(userName, "You should send me a message starting with 'find' or 'search', then the beer name you want infos about.";
+				var answer = formatMessage(userName, "You should send me a message starting with 'find' or 'search', then the beer name you want infos about.");
 				postTweet(T,answer, function(data){
 					console.log(answer);
 				});
@@ -198,6 +247,6 @@ setInterval( function(){
 	else {
 		T.get('statuses/mentions_timeline', { count: '5', since_id: lastId }, getAndTreatMentions); 
 	}
-}, (6*1000)) 
+}, (60*1000)) 
 
 
