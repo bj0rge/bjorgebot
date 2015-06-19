@@ -2,18 +2,9 @@ var Twit = require('twit')
 var Const = require('./constants');
 var http = require('http');
 
-/*
- * ##################################
- * ##################################
- */
-
 var BreweryDb = require('brewerydb-node'); 
 var brewdb = new BreweryDb(Const.CONSTANTS['brewerydb_key']);
 
-/*
- * ##################################
- * ##################################
- */
  
 var T = new Twit({
     consumer_key:         Const.CONSTANTS['consumer_key']
@@ -26,7 +17,7 @@ var T = new Twit({
 /*
  * Gives the time since the tweet was posted
  * @params	tweet	array		json formated tweet
- * @return	diff	int			time since the tweet was posted (in seconds)
+ * @return	int			time since the tweet was posted (in seconds)
  */
 function timeSincePosted(tweet) {
     var tweet_date = new Date(Date.parse(tweet.created_at));
@@ -35,6 +26,30 @@ function timeSincePosted(tweet) {
     var diff = Math.floor((now - tweet_date) / 1000);
 	
     return diff;
+}
+
+/*
+ * Sends a tweet
+ * @params	T			Twit instance	Instance of Twit object
+ *			answer		string			The answer the bot will post
+ *			callback	function		The function that will be executed when the request will be post
+ */
+function postTweet(T, answer, callback) {
+	T.post('statuses/update', { status: answer }, function(err, data, response) {
+		callback(data);
+	});
+}
+
+
+/*
+ * Format a message for making him less than 140 characters and add the mention
+ * @params	username	string		The name of the receiver of the message
+ *			message		string		The message to format
+ * @returns	string	The formatted message
+ */
+function formatMessage(username, message) {
+	message = "@" + username + " " + message;
+	return (message.length <= 140) ? message : (message.substring(0,137) + "...");
 }
 
 
@@ -90,12 +105,15 @@ function getAndTreatMentions(err, data, response) {
 							// var img = (beer.labels) ? "\n" + beer.labels.medium : "";
 							var img = "";
 							
-							var answer = '@'+userName+': ' + beer.nameDisplay +' - '+ beer.style.shortName + img+'\nMore infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id;
+							var answer = formatMessage(userName,
+								beer.nameDisplay +' - '+ beer.style.shortName + img+'\n\
+								More infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id);
 							
-							
-							T.post('statuses/update', { status: answer }, function(err, data, response) {
-								console.log("status: " + answer);
+							postTweet(T,answer, function(data){
+								console.log(answer);
 							});
+							
+							
 							
 							
 							// The bot also says it has found other beers
@@ -108,10 +126,9 @@ function getAndTreatMentions(err, data, response) {
 									}
 									beers = beers.substring(0, (beers.length - 2));
 									
-									var answer = '@'+userName+': We also found: ' + beers;
-									answer = (answer.length <= 140) ? answer : (answer.substring(0,137) + "...");
+									var answer = formatMessage(userName,'We also found: ' + beers);
 									
-									T.post('statuses/update', { status: answer }, function(err, data, response) {
+									postTweet(T,answer, function(data){
 										console.log(answer);
 									});
 								}
@@ -121,9 +138,9 @@ function getAndTreatMentions(err, data, response) {
 					}
 					// If there is no result, we tell the user
 					else {
-						var answer = "@" +userName+ " Sorry, we weren't able to find your beer. Please try another request :)";
-						T.post('statuses/update', { status: answer }, function(err, data, response) {
-							console.log(answer);	
+						var answer = formatMessage(userName, "Sorry, we weren't able to find your beer. Please try another request :)");
+						postTweet(T,answer, function(data){
+							console.log(answer);
 						});
 					}
 				});
@@ -140,27 +157,25 @@ function getAndTreatMentions(err, data, response) {
 						}
 						beers = beers.substring(0, (beers.length - 2));
 						
-						var answer = '@'+userName+': We found: ' + beers;
-						answer = (answer.length <= 140) ? answer : (answer.substring(0,137) + "...");
-						
-						T.post('statuses/update', { status: answer }, function(err, data, response) {
-								console.log(answer);
-							});
+						var answer = formatMessage(userName, 'We found: ' + beers);
+						postTweet(T,answer, function(data){
+							console.log(answer);
+						});
 					}
 					// If no result
 					else {
-						var answer = "@" +userName+ " Sorry, we weren't able to find your beer. Please try another request :)";
-						T.post('statuses/update', { status: answer }, function(err, data, response) {
-							console.log(answer);	
+						var answer = formatMessage(userName, "Sorry, we weren't able to find your beer. Please try another request :)";
+						postTweet(T,answer, function(data){
+							console.log(answer);
 						});
 					}
 				});
 			}
 			// if the answer is not correctly formatted 
 			else {
-				var answer = "@" +userName+ " You should send me a message starting with 'find' or 'search', then the beer name you want infos about.";
-				T.post('statuses/update', { status: answer }, function(err, data, response) {
-					console.log(answer);	
+				var answer = formatMessage(userName, "You should send me a message starting with 'find' or 'search', then the beer name you want infos about.";
+				postTweet(T,answer, function(data){
+					console.log(answer);
 				});
 			}
 
@@ -183,6 +198,6 @@ setInterval( function(){
 	else {
 		T.get('statuses/mentions_timeline', { count: '5', since_id: lastId }, getAndTreatMentions); 
 	}
-}, (60*1000)) 
+}, (6*1000)) 
 
 
