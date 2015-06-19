@@ -134,7 +134,8 @@ function getAndTreatMentions(err, data, response) {
 						brewdb.beer.getById(beer.id, {}, function(err, data){
 							// Special treatment if there is a picture	
 							if (beer.labels.medium) {
-								var filename = 'tmp.' + beer.labels.medium.split(".")[beer.labels.medium.split(".").length - 1];
+								var filename = beer.labels.medium.split(".")[beer.labels.medium.split(".").length - 2] 
+									+ beer.labels.medium.split(".")[beer.labels.medium.split(".").length - 1];
 								var answer = formatMessage(userName,
 										beer.nameDisplay +' ('+ beer.abv +'°) - '+ beer.style.shortName + '\n\
 										More infos: ' + Const.CONSTANTS['beer_uri_base'] + beer.id);
@@ -144,19 +145,17 @@ function getAndTreatMentions(err, data, response) {
 									//
 									// post a tweet with media
 									//
-									var b64content = fs.readFileSync(filename, { encoding: 'base64' })
+									var b64content = fs.readFileSync(filename, { encoding: 'base64' });
 
 									// first we must post the media to Twitter
 									T.post('media/upload', { media: b64content }, function (err, data, response) {
-										
-										
-											
+																					
 										// now we can reference the media and post a tweet (media will attach to the tweet)
 										var mediaIdStr = data.media_id_string
 										var params = { status: answer, media_ids: [mediaIdStr] }
 
 										T.post('statuses/update', params, function (err, data, response) {
-											console.log(answer)
+											console.log(answer);
 											
 											// We know can remove the temp file
 											fs.unlink(filename, function (err) {
@@ -247,6 +246,6 @@ setInterval( function(){
 	else {
 		T.get('statuses/mentions_timeline', { count: '5', since_id: lastId }, getAndTreatMentions); 
 	}
-}, (60*1000)) 
+}, (6*1000)) 
 
 
