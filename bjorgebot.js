@@ -82,7 +82,12 @@ var download = function(uri, filename, callback){
     console.log('content-type:', res.headers['content-type']);
     console.log('content-length:', res.headers['content-length']);
 
-    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+    // request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+	
+	var ws = fs.createWriteStream(filename);
+	ws.on('error', function(err) { console.log(err); });
+	request(uri).pipe(ws).on('close', callback);
+	
   });
 };
 
@@ -246,6 +251,6 @@ setInterval( function(){
 	else {
 		T.get('statuses/mentions_timeline', { count: '5', since_id: lastId }, getAndTreatMentions); 
 	}
-}, (6*1000)) 
+}, (60*1000)) 
 
 
